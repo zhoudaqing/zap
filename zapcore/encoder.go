@@ -24,8 +24,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
+
 	"go.uber.org/zap/buffer"
 )
+
+var (
+	// TODO(pedge): add a test to verify all levels covered? It would be nice
+	// to maintain a slice of all levels in level.go for testing, even if there
+	// is already _minLevel and _maxLevel
+	levelToColor = map[Level]*color.Color{
+		DebugLevel:  color.New(color.FgMagenta),
+		InfoLevel:   color.New(color.FgBlue),
+		WarnLevel:   color.New(color.FgYellow),
+		ErrorLevel:  color.New(color.FgRed),
+		DPanicLevel: color.New(color.FgRed),
+		PanicLevel:  color.New(color.FgRed),
+		FatalLevel:  color.New(color.FgRed),
+	}
+)
+
+// TODO(pedge): we can probably just cache the level strings
 
 // A LevelEncoder serializes a Level to a primitive type.
 type LevelEncoder func(Level, PrimitiveArrayEncoder)
@@ -36,18 +55,36 @@ func LowercaseLevelEncoder(l Level, enc PrimitiveArrayEncoder) {
 	enc.AppendString(l.String())
 }
 
+// ColoredLowercaseLevelEncoder serializes a Level to a lowercase string and adds coloring.
+// For example, InfoLevel is serialized to "info".
+func ColoredLowercaseLevelEncoder(l Level, enc PrimitiveArrayEncoder) {
+	enc.AppendString(levelToColor[l].Sprint(l.String()))
+}
+
 // CapitalLevelEncoder serializes a Level to an all-caps string. For example,
 // InfoLevel is serialized to "INFO".
 func CapitalLevelEncoder(l Level, enc PrimitiveArrayEncoder) {
 	enc.AppendString(strings.ToUpper(l.String()))
 }
 
+// ColoredCapitalLevelEncoder serializes a Level to an all-caps string and adds color.
+// For example, InfoLevel is serialized to "INFO".
+func ColoredCapitalLevelEncoder(l Level, enc PrimitiveArrayEncoder) {
+	enc.AppendString(levelToColor[l].Sprint(strings.ToUpper(l.String())))
+}
+
 // UnmarshalText unmarshals text to a LevelEncoder. "capital" is unmarshaled to
-// CapitalLevelEncoder, and anything else is unmarshaled to LowercaseLevelEncoder.
+// CapitalLevelEncoder, "colored_capital" is unmarshaled to ColoredCapitalLevelEncoder,
+// "colored" is unmarshaled to ColoredLowercaseLevelEncoder, and anything else
+// is unmarshaled to LowercaseLevelEncoder.
 func (e *LevelEncoder) UnmarshalText(text []byte) error {
 	switch string(text) {
 	case "capital":
 		*e = CapitalLevelEncoder
+	case "colored_capital":
+		*e = ColoredCapitalLevelEncoder
+	case "colored":
+		*e = ColoredLowercaseLevelEncoder
 	default:
 		*e = LowercaseLevelEncoder
 	}
