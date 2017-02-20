@@ -21,26 +21,35 @@
 package zapcore
 
 import (
+	"fmt"
 	"strings"
 	"time"
-
-	"github.com/fatih/color"
 
 	"go.uber.org/zap/buffer"
 )
 
+const (
+	fgBlack colorCode = iota + 30
+	fgRed
+	fgGreen
+	fgYellow
+	fgBlue
+	fgMagenta
+	fgCyan
+	fgWhite
+)
+
+type colorCode int
+
 var (
-	// TODO(pedge): add a test to verify all levels covered? It would be nice
-	// to maintain a slice of all levels in level.go for testing, even if there
-	// is already _minLevel and _maxLevel
-	levelToColor = map[Level]*color.Color{
-		DebugLevel:  color.New(color.FgMagenta),
-		InfoLevel:   color.New(color.FgBlue),
-		WarnLevel:   color.New(color.FgYellow),
-		ErrorLevel:  color.New(color.FgRed),
-		DPanicLevel: color.New(color.FgRed),
-		PanicLevel:  color.New(color.FgRed),
-		FatalLevel:  color.New(color.FgRed),
+	levelToColorCode = map[Level]colorCode{
+		DebugLevel:  fgMagenta,
+		InfoLevel:   fgBlue,
+		WarnLevel:   fgYellow,
+		ErrorLevel:  fgRed,
+		DPanicLevel: fgRed,
+		PanicLevel:  fgRed,
+		FatalLevel:  fgRed,
 	}
 )
 
@@ -58,7 +67,7 @@ func LowercaseLevelEncoder(l Level, enc PrimitiveArrayEncoder) {
 // ColoredLowercaseLevelEncoder serializes a Level to a lowercase string and adds coloring.
 // For example, InfoLevel is serialized to "info".
 func ColoredLowercaseLevelEncoder(l Level, enc PrimitiveArrayEncoder) {
-	enc.AppendString(levelToColor[l].Sprint(l.String()))
+	encodeWithColor(l, enc, l.String())
 }
 
 // CapitalLevelEncoder serializes a Level to an all-caps string. For example,
@@ -70,7 +79,16 @@ func CapitalLevelEncoder(l Level, enc PrimitiveArrayEncoder) {
 // ColoredCapitalLevelEncoder serializes a Level to an all-caps string and adds color.
 // For example, InfoLevel is serialized to "INFO".
 func ColoredCapitalLevelEncoder(l Level, enc PrimitiveArrayEncoder) {
-	enc.AppendString(levelToColor[l].Sprint(strings.ToUpper(l.String())))
+	encodeWithColor(l, enc, strings.ToUpper(l.String()))
+}
+
+func encodeWithColor(l Level, enc PrimitiveArrayEncoder, s string) {
+	colorCode, ok := levelToColorCode[l]
+	if !ok {
+		enc.AppendString(s)
+		return
+	}
+	enc.AppendString(fmt.Sprintf("\x1b[%dm%s\x1b[0m", colorCode, s))
 }
 
 // UnmarshalText unmarshals text to a LevelEncoder. "capital" is unmarshaled to
@@ -81,7 +99,7 @@ func (e *LevelEncoder) UnmarshalText(text []byte) error {
 	switch string(text) {
 	case "capital":
 		*e = CapitalLevelEncoder
-	case "colored_capital":
+	case "coloredCapital":
 		*e = ColoredCapitalLevelEncoder
 	case "colored":
 		*e = ColoredLowercaseLevelEncoder
