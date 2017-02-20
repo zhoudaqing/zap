@@ -92,7 +92,7 @@ func encodeWithColor(l Level, enc PrimitiveArrayEncoder, s string) {
 }
 
 // UnmarshalText unmarshals text to a LevelEncoder. "capital" is unmarshaled to
-// CapitalLevelEncoder, "colored_capital" is unmarshaled to ColoredCapitalLevelEncoder,
+// CapitalLevelEncoder, "coloredCapital" is unmarshaled to ColoredCapitalLevelEncoder,
 // "colored" is unmarshaled to ColoredLowercaseLevelEncoder, and anything else
 // is unmarshaled to LowercaseLevelEncoder.
 func (e *LevelEncoder) UnmarshalText(text []byte) error {
